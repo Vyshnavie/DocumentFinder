@@ -77,6 +77,15 @@ exports.postImagesForUserByPuid = function(request, response, image_name) {
     });
 };
 
+exports.getImageText = function(request, response, image_name) {
+    vision.detectText('public/uploads/' + image_name,  function(err, text, apiResponse) {
+        response.send({
+           "status" : 200,
+            "text" : text
+        });
+    });
+};
+
 var storeInMongoImage = function(request, response, imageID, text) {
     mongodb.MongoClient.connect(mongoURL, function(error, db) {
         var bucket = new mongodb.GridFSBucket(db, {

@@ -72,10 +72,13 @@ var storage = multer.diskStorage({
 });
 
 //var upload = multer({dest: 'public/uploads/'});
-var upload = multer({ storage: storage })
+var upload = multer({ storage: storage });
 
 app.post('/api/users/images', upload.single('image'), function(request, response) {
     imageStorage.postImagesForUserByPuid(request, response, image_name);
+});
+app.post('/api/images/text', upload.single('image'), function(request, response) {
+    imageStorage.getImageText(request, response, image_name);
 });
 app.get('/api/users/images', imageStorage.getImageUrlsForUserByPuid);
 app.get('/api/users/images/:imageName', imageStorage.getImageByImageUrl);
