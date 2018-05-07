@@ -80,6 +80,18 @@ app.post('/api/users/images', upload.single('image'), function(request, response
 app.post('/api/images/text', upload.single('image'), function(request, response) {
     imageStorage.getImageText(request, response, image_name);
 });
+
+
+// New APIs
+app.post('/api/userimages/text', upload.single('image'), function(request, response) {
+    console.log(request.body.userid);
+    imageStorage.postImagesForUserByUserid(request, response, image_name);
+});
+app.get('/api/userimages/:userid', imageStorage.getImageUrlsForUserByUserid);
+app.get('/api/userimages/:userid/:imageName', imageStorage.getImageByImageUrl);
+app.get('/api/users/images/:imageName/labels', wardrobeMatcher.getImageLabels);
+
+
 app.get('/api/users/images', imageStorage.getImageUrlsForUserByPuid);
 app.get('/api/users/images/:imageName', imageStorage.getImageByImageUrl);
 app.get('/api/users/images/:imageName/labels', wardrobeMatcher.getImageLabels);

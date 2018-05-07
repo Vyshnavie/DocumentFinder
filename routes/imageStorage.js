@@ -77,6 +77,64 @@ exports.postImagesForUserByPuid = function(request, response, image_name) {
     });
 };
 
+exports.postImagesForUserByUserid = function(request, response, image_name) {
+    vision.detectText('public/uploads/' + image_name,  function(err, text, apiResponse) {
+        mongo.connect(mongoURL, function() {
+            var images = mongo.collection('Images');
+            var image_details = mongo.collection('Image_details');
+            dbHelper.doesExistInDb(images, {
+                    "puid": request.body.userid
+                }, function() {
+                    console.log("user exists");
+                    dbHelper.readOne(images, {"puid":request.body.userid}, null, function(data) {
+                        //image_details
+                        console.log("read data");
+                        console.log(data);
+                        var image_details_post_data  = {};
+                        image_details_post_data.image = image_name;
+                        image_details_post_data.text = text;
+
+                        dbHelper.insertIntoCollection(image_details, image_details_post_data, function() {
+                            var imageID = image_name;
+                            var userpuid = request.body.userid;
+                            data[userpuid].images.push(imageID);
+                            //console.log(data);
+                            //already present in db
+
+                            var searchData = {};
+                            searchData.puid = request.body.userid;
+                            var postData = {};
+                            var imageKey = {};
+                            imageKey[request.body.userid] = data[request.body.userid];
+                            postData['$set'] = imageKey;
+                            dbHelper.updateCollection(images, searchData, postData, function() {
+                                storeInMongoImage(request, response, imageID, text);
+                            });
+                        });
+                    });
+                },
+                function() {
+                    var puidData = {};
+                    var postData = {};
+                    var image_details_post_data  = {};
+                    image_details_post_data.image = image_name;
+                    image_details_post_data.text = text;
+
+                    dbHelper.insertIntoCollection(image_details, image_details_post_data, function() {
+                        var imageID = image_name;
+                        puidData.images = [];
+                        puidData.images.push(imageID);
+                        postData.puid = request.body.userid;
+                        postData[request.body.userid] = puidData;
+                        dbHelper.insertIntoCollection(images, postData, function() {
+                            storeInMongoImage(request, response, imageID, text);
+                        });
+                    });
+                });
+        });
+    });
+};
+
 exports.getImageText = function(request, response, image_name) {
     vision.detectText('public/uploads/' + image_name,  function(err, text, apiResponse) {
         response.send({
@@ -106,8 +164,36 @@ var storeInMongoImage = function(request, response, imageID, text) {
             console.log('done!');
             response.send({
                 "status" : 200,
-                "message" : "Image uploaded successfully for user with puid: " + 100,
+                "message" : "Image uploaded successfully for user with puid: " + request.params.userid,
                 "labels" : text
+            });
+        });
+    });
+};
+
+exports.getImageUrlsForUserByUserid = function(request, response) {
+    mongo.connect(mongoURL, function() {
+        var images = mongo.collection('Images');
+        dbHelper.doesExistInDb(images, {
+            "puid" : request.params.userid
+        }, function() {
+            dbHelper.readOne(images, {"puid": request.params.userid}, null, function(data) {
+                //uuid.v4();
+                console.log(JSON.stringify(data));
+                var imageUrls = [];
+                for (var index = 0; index < data[request.params.userid].images.length; index++) {
+                    var imageUrl = 'api/users/images/' + data[request.params.userid].images[index];
+                    imageUrls.push(imageUrl);
+                }
+                response.send({
+                    "status" : 200,
+                    "urls" : imageUrls
+                });
+            });
+        }, function() {
+            response.send({
+                "status" : 404,
+                "errmsg" : "Error: No images found for user in db with email: " + request.params.userid
             });
         });
     });
